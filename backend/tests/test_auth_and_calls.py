@@ -57,7 +57,7 @@ async def test_register_login_upload_flow() -> None:
         assert upload.status_code == 200
         payload = upload.json()
         assert payload['status'] == 'analyzed'
-        assert payload['analysis']['buying_intent_score'] >= 4
+        assert payload['analysis']['scores']['buying_intent_score'] >= 4
 
         listed = await client.get('/api/v1/calls', headers={'Authorization': f'Bearer {token}'})
         assert listed.status_code == 200
@@ -120,3 +120,61 @@ async def test_upload_failure_marks_call_failed(monkeypatch: pytest.MonkeyPatch)
         assert len(rows) == 1
         assert rows[0][0] == CallStatus.FAILED
         assert rows[0][1] == {'error': 'Analysis failed'}
+
+
+@pytest.mark.asyncio
+async def test_call_crm_sync_and_template_settings() -> None:
+    await _reset_db()
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url='http://test') as client:
+        await client.post(
+            '/api/v1/auth/register',
+            json={
+                'organization_name': 'Gamma Inc',
+                'full_name': 'Manager User',
+                'email': 'manager@gamma.com',
+                'password': 'Password123!',
+            },
+        )
+        login = await client.post(
+            '/api/v1/auth/login', json={'email': 'manager@gamma.com', 'password': 'Password123!'}
+        )
+        token = login.json()['access_token']
+
+        upload = await client.post(
+            '/api/v1/calls/upload',
+            headers={'Authorization': f'Bearer {token}'},
+            files={'file': ('demo.txt', io.BytesIO(b'budget timeline next week demo'), 'text/plain')},
+        )
+        call_id = upload.json()['id']
+
+        sync = await client.post(
+            f'/api/v1/calls/{call_id}/sync-crm', headers={'Authorization': f'Bearer {token}'}
+        )
+        assert sync.status_code == 200
+        assert sync.json()['crm_sync']['status'] == 'synced'
+
+        updated = await client.get(
+            f'/api/v1/calls/{call_id}', headers={'Authorization': f'Bearer {token}'}
+        )
+        assert updated.status_code == 200
+        assert (
+            updated.json()['analysis']['structured_payload']['crm_sync']['status'] == 'synced'
+        )
+
+        save_templates = await client.put(
+            '/api/v1/settings/templates',
+            headers={'Authorization': f'Bearer {token}'},
+            json={
+                'crm_field_mapping': {'prospect_email': 'Contact.Email'},
+                'call_analysis_template': {'framework': 'BANT'},
+            },
+        )
+        assert save_templates.status_code == 200
+
+        read_templates = await client.get(
+            '/api/v1/settings/templates', headers={'Authorization': f'Bearer {token}'}
+        )
+        assert read_templates.status_code == 200
+        assert read_templates.json()['call_analysis_template']['framework'] == 'BANT'

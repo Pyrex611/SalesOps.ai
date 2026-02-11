@@ -86,6 +86,39 @@ async def upload_call(
     return CallOut.model_validate(call)
 
 
+@router.post('/{call_id}/sync-crm')
+async def sync_call_to_crm(
+    call_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    result = await db.execute(
+        select(Call).where(
+            Call.id == call_id, Call.organization_id == current_user.organization_id
+        )
+    )
+    call = result.scalar_one_or_none()
+    if not call:
+        raise HTTPException(status_code=404, detail='Call not found')
+
+    analysis = dict(call.analysis or {})
+    structured = dict(analysis.get('structured_payload') or {})
+    crm_sync = {
+        'status': 'synced',
+        'provider': 'mock-crm',
+        'synced_by_user_id': current_user.id,
+        'contact_email': f"{current_user.email}",
+    }
+    structured['crm_sync'] = crm_sync
+    analysis['structured_payload'] = structured
+    call.analysis = analysis
+
+    await db.commit()
+    await db.refresh(call)
+
+    return {'call_id': call.id, 'crm_sync': crm_sync}
+
+
 @router.get('/{call_id}', response_model=CallOut)
 async def get_call(
     call_id: int,

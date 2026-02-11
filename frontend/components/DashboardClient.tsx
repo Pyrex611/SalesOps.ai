@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { API_BASE } from '@/lib/api';
+import { apiRequest } from '@/lib/api';
 
 type CallItem = {
   id: number;
@@ -13,6 +13,7 @@ type CallItem = {
 
 export function DashboardClient() {
   const [calls, setCalls] = useState<CallItem[]>([]);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -20,12 +21,10 @@ export function DashboardClient() {
       window.location.href = '/login';
       return;
     }
-    fetch(`${API_BASE}/api/v1/calls`, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: 'no-store'
-    })
-      .then((r) => r.json())
-      .then((data) => setCalls(data));
+
+    apiRequest('/api/v1/calls', { token })
+      .then((data) => setCalls(data as CallItem[]))
+      .catch((err: Error) => setError(err.message));
   }, []);
 
   return (
@@ -34,6 +33,7 @@ export function DashboardClient() {
         <h2>Quick Actions</h2>
         <Link href="/calls">Upload and analyze call</Link>
       </div>
+      {error && <div className="card">Error loading calls: {error}</div>}
       {calls.map((call) => (
         <div className="card" key={call.id}>
           <h3>{call.file_name}</h3>

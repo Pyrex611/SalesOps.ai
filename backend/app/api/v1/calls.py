@@ -1,4 +1,5 @@
 from pathlib import Path
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy import select
@@ -13,6 +14,14 @@ from app.services.dependencies import get_current_user
 from app.services.transcription import TranscriptionService
 
 router = APIRouter(prefix='/calls', tags=['calls'])
+
+
+def _safe_file_name(original_name: str) -> str:
+    path = Path(original_name)
+    stem = ''.join(ch if ch.isalnum() or ch in {'-', '_'} else '_' for ch in path.stem)
+    ext = path.suffix.lower()
+    normalized_stem = stem.strip('_')[:100] or 'upload'
+    return f'{normalized_stem}{ext}'
 
 
 @router.get('', response_model=list[CallOut])
@@ -39,27 +48,38 @@ async def upload_call(
     if len(content) > max_size:
         raise HTTPException(status_code=413, detail='File exceeds maximum upload size')
 
+    original_name = file.filename or 'upload.txt'
+    safe_name = _safe_file_name(original_name)
+
     storage_dir = Path(settings.storage_path)
     storage_dir.mkdir(parents=True, exist_ok=True)
-    file_path = storage_dir / f'{current_user.organization_id}_{file.filename}'
+    file_path = storage_dir / f'{current_user.organization_id}_{uuid4().hex}_{safe_name}'
     with file_path.open('wb') as handle:
         handle.write(content)
 
     call = Call(
         organization_id=current_user.organization_id,
         user_id=current_user.id,
-        file_name=file.filename,
+        file_name=original_name,
         file_path=str(file_path),
         status=CallStatus.UPLOADED,
     )
     db.add(call)
     await db.flush()
 
-    transcript = await TranscriptionService.transcribe(str(file_path))
-    analysis = AnalysisService.analyze(transcript)
-    call.transcript = transcript
-    call.analysis = analysis
-    call.status = CallStatus.ANALYZED
+    try:
+        transcript = await TranscriptionService.transcribe(str(file_path))
+        call.status = CallStatus.TRANSCRIBED
+
+        analysis = AnalysisService.analyze(transcript)
+        call.transcript = transcript
+        call.analysis = analysis
+        call.status = CallStatus.ANALYZED
+    except Exception as exc:
+        call.status = CallStatus.FAILED
+        call.analysis = {'error': 'Analysis failed'}
+        await db.commit()
+        raise HTTPException(status_code=500, detail='Call analysis failed') from exc
 
     await db.commit()
     await db.refresh(call)

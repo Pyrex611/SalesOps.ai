@@ -4,6 +4,10 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
 
+type LoginResponse = {
+  access_token: string;
+};
+
 export function AuthForm() {
   const router = useRouter();
   const [mode, setMode] = useState<'login' | 'register'>('register');
@@ -12,10 +16,13 @@ export function AuthForm() {
   const [name, setName] = useState('');
   const [org, setOrg] = useState('');
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const submit = async () => {
     try {
+      setSubmitting(true);
       setError('');
+
       if (mode === 'register') {
         await apiRequest('/api/v1/auth/register', {
           method: 'POST',
@@ -27,14 +34,18 @@ export function AuthForm() {
           })
         });
       }
-      const token = await apiRequest('/api/v1/auth/login', {
+
+      const token = (await apiRequest('/api/v1/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password })
-      });
+      })) as LoginResponse;
+
       localStorage.setItem('token', token.access_token);
       router.push('/dashboard');
     } catch (err) {
       setError((err as Error).message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -53,8 +64,10 @@ export function AuthForm() {
       <input value={email} onChange={(e) => setEmail(e.target.value)} />
       <label>Password</label>
       <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-      <button onClick={submit}>{mode === 'register' ? 'Register + Login' : 'Login'}</button>
-      <button onClick={() => setMode(mode === 'register' ? 'login' : 'register')}>
+      <button onClick={submit} disabled={submitting}>
+        {submitting ? 'Submitting...' : mode === 'register' ? 'Register + Login' : 'Login'}
+      </button>
+      <button onClick={() => setMode(mode === 'register' ? 'login' : 'register')} disabled={submitting}>
         Switch to {mode === 'register' ? 'login' : 'register'}
       </button>
       {error && <p>{error}</p>}

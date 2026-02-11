@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from app.api.v1.auth import router as auth_router
 from app.api.v1.calls import router as calls_router
@@ -22,7 +23,7 @@ app = FastAPI(title=settings.app_name, version='1.0.0', lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[origin.strip() for origin in settings.cors_origins.split(',')],
+    allow_origins=[origin.strip() for origin in settings.cors_origins.split(',') if origin.strip()],
     allow_credentials=True,
     allow_methods=['*'],
     allow_headers=['*'],
@@ -32,6 +33,13 @@ app.add_middleware(
 @app.get('/health')
 async def health() -> dict[str, str]:
     return {'status': 'ok'}
+
+
+@app.get('/ready')
+async def readiness() -> dict[str, str]:
+    async with engine.connect() as conn:
+        await conn.execute(text('SELECT 1'))
+    return {'status': 'ready'}
 
 
 app.include_router(auth_router, prefix='/api/v1')

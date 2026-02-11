@@ -57,7 +57,7 @@ async def test_register_login_upload_flow() -> None:
         assert upload.status_code == 200
         payload = upload.json()
         assert payload['status'] == 'analyzed'
-        assert payload['analysis']['buying_intent_score'] >= 4
+        assert payload['analysis']['scores']['buying_intent_score'] >= 4
 
         listed = await client.get('/api/v1/calls', headers={'Authorization': f'Bearer {token}'})
         assert listed.status_code == 200

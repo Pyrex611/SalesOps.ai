@@ -17,6 +17,13 @@ class Settings(BaseSettings):
     max_upload_mb: int = 500
     storage_path: str = './storage'
 
+    google_api_key: str = ''
+    gemini_model_fast: str = 'gemini-2.5-flash'
+    gemini_model_deep: str = 'gemini-2.5-pro'
+    deepgram_api_key: str = ''
+    assemblyai_api_key: str = ''
+    sendgrid_api_key: str = ''
+
     @field_validator('max_upload_mb')
     @classmethod
     def validate_max_upload_mb(cls, value: int) -> int:

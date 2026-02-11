@@ -81,6 +81,34 @@ export function CallUploader() {
     setItems((current) => current.map((item, i) => (i === index ? { ...item, ...patch } : item)));
   };
 
+    }
+    return null;
+  };
+
+  const addFiles = (incoming: FileList | null) => {
+    if (!incoming?.length) return;
+    const nextFiles = Array.from(incoming).slice(0, MAX_FILES - items.length);
+    const nextItems: UploadItem[] = [];
+
+    nextFiles.forEach((file) => {
+      const invalid = validate(file);
+      if (invalid) {
+        setError(invalid);
+        return;
+      }
+      nextItems.push({ file, progress: 0, status: 'queued' });
+    });
+
+    if (nextItems.length) {
+      setError('');
+      setItems((current) => [...current, ...nextItems]);
+    }
+  };
+
+  const updateItem = (index: number, patch: Partial<UploadItem>) => {
+    setItems((current) => current.map((item, i) => (i === index ? { ...item, ...patch } : item)));
+  };
+
   const analyzeCalls = async () => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -96,6 +124,19 @@ export function CallUploader() {
     setError('');
 
     const completedCallIds: number[] = [];
+
+    for (let i = 0; i < items.length; i += 1) {
+      const item = items[i];
+      if (item.status === 'analyzed') continue;
+
+      try {
+        updateItem(i, { status: 'uploading', progress: 20 });
+        const form = new FormData();
+        form.append('file', item.file);
+
+
+    setUploading(true);
+    setError('');
 
     for (let i = 0; i < items.length; i += 1) {
       const item = items[i];
@@ -133,7 +174,17 @@ export function CallUploader() {
 
     if (completedCallIds.length > 0) {
       router.push(`/calls/${completedCallIds[0]}`);
+      } catch (err) {
+        updateItem(i, { status: 'failed', error: (err as Error).message, progress: 100 });
+      }
     }
+
+    setUploading(false);
+  };
+
+  const resetQueue = () => {
+    setItems([]);
+    setError('');
   };
 
   const resetQueue = () => {

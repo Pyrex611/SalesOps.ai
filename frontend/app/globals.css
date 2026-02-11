@@ -1,0 +1,40 @@
+:root {
+  color-scheme: light dark;
+  font-family: Inter, Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: #0b1020;
+  color: #e5e7eb;
+}
+
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.card {
+  background: #121a33;
+  border: 1px solid #26345f;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+input, button, textarea {
+  width: 100%;
+  margin-top: 8px;
+  margin-bottom: 12px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #2d3d6f;
+}
+
+button {
+  background: #2563eb;
+  color: white;
+  cursor: pointer;
+}

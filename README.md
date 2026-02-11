@@ -112,6 +112,23 @@ Backend defaults to `http://localhost:8000`, frontend to `http://localhost:3000`
 
 ---
 
+
+## Competitive Positioning Snapshot
+
+The current product direction is built to match or exceed leading conversation-intelligence tools on UX clarity and workflow speed.
+
+| Capability | Gong/Chorus-style baseline | SalesOps.ai status |
+|---|---|---|
+| Call upload + transcription workflow | Strong | Implemented with queue UX + analysis handoff |
+| Structured call analysis (BANT + scorecard) | Partial in market | Implemented with extensible JSON contract |
+| Follow-up email drafting | Varies | Implemented in post-call workspace |
+| CRM sync handoff | Strong in incumbents | Implemented endpoint + post-call sync action (extensible provider layer) |
+| Manager-configurable templates | Limited | Implemented manager/admin template studio |
+
+> Note: Some enterprise-level capabilities (deep vendor connectors, full real-time coaching, compliance certification workflows) remain roadmap items and should be expanded iteratively.
+
+---
+
 ## API Overview
 
 - `POST /api/v1/auth/register` — create org + admin user
@@ -122,6 +139,9 @@ Backend defaults to `http://localhost:8000`, frontend to `http://localhost:3000`
 - `GET /api/v1/calls/{id}` — fetch a call
 
 ---
+
+## Testing & Quality
+
 
 ## Testing & Quality
 

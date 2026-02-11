@@ -6,6 +6,7 @@ from sqlalchemy import text
 
 from app.api.v1.auth import router as auth_router
 from app.api.v1.calls import router as calls_router
+from app.api.v1.settings import router as settings_router
 from app.core.config import get_settings
 from app.db.base import Base
 from app.db.session import engine
@@ -44,3 +45,4 @@ async def readiness() -> dict[str, str]:
 
 app.include_router(auth_router, prefix='/api/v1')
 app.include_router(calls_router, prefix='/api/v1')
+app.include_router(settings_router, prefix='/api/v1')
